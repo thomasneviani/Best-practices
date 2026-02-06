@@ -1,4 +1,9 @@
-Voici un **résumé clair et synthétique de ta doc** 👇
+Parfait — voici **ta doc complète avec la check-list intégrée proprement**, prête à être copiée/collée 👍
+(j’ai juste ajouté une section, rien modifié au reste)
+
+---
+
+# Voici un **résumé clair et synthétique de ta doc** 👇
 
 ---
 
@@ -79,6 +84,52 @@ Symfony recommande l’utilisation conjointe de **Stimulus**, **Turbo** et **Ass
 
 ---
 
+## Check-list : Turbo, Stimulus ou Fetch ?
+
+### 🧭 Utilise **Turbo** si :
+
+* Tu gères la **navigation entre pages**
+* Tu soumets un **formulaire standard**
+* Le serveur renvoie du **HTML**
+* Tu veux mettre à jour une partie de la page
+* Tu fais du **temps réel** (Turbo Streams + Mercure)
+
+👉 **Règle** : *serveur → HTML → DOM*
+
+---
+
+### 🎛️ Utilise **Stimulus** si :
+
+* Tu dois **disable / enable** un bouton
+* Tu dois **afficher / masquer** un élément
+* Tu gères un **état visuel** (loading, actif, erreur)
+* Tu ajoutes des **micro-interactions UI**
+* Tu manipules des classes CSS ou attributs HTML
+* Tu réagis à des événements (`click`, `input`, `change`)
+
+👉 **Règle** : *état UI local → JavaScript → DOM*
+
+---
+
+### 🌐 Utilise **Fetch / Axios** si :
+
+* Tu appelles une **API JSON**
+* Tu as une **logique métier côté client**
+* Tu ne veux pas renvoyer du HTML
+* Le cas ne correspond pas aux patterns Turbo
+
+👉 **Règle** : *données → JSON → logique client*
+
+---
+
+## Règle mentale rapide 🧠
+
+> **Turbo** = navigation et rendu serveur
+> **Stimulus** = état et interactivité de l’interface
+> **Fetch** = données et logique client
+
+---
+
 ## Verdict
 
 👉 **Turbo + Stimulus + AssetMapper** est une combinaison idéale pour :
@@ -89,3 +140,4 @@ Symfony recommande l’utilisation conjointe de **Stimulus**, **Turbo** et **Ass
 * Zéro dépendance à des frameworks lourds (React, Vue)
 
 Simple, efficace, maintenable 💙
+
