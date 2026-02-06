@@ -1,5 +1,36 @@
 https://symfony.com/doc/current/best_practices.html
 
+your_project/
+├─ assets/
+├─ bin/
+│  └─ console
+├─ config/
+│  ├─ packages/
+│  ├─ routes/
+│  └─ services.yaml
+├─ migrations/
+├─ public/
+│  ├─ build/
+│  └─ index.php
+├─ src/
+│  ├─ Kernel.php
+│  ├─ Command/
+│  ├─ Controller/
+│  ├─ DataFixtures/
+│  ├─ Entity/
+│  ├─ EventSubscriber/
+│  ├─ Form/
+│  ├─ Repository/
+│  ├─ Security/
+│  └─ Twig/
+├─ templates/
+├─ tests/
+├─ translations/
+├─ var/
+│  ├─ cache/
+│  └─ log/
+└─ vendor/
+
 Oui, c'est tout à fait recommandé d'utiliser Stimulus, Turbo et AssetMapper dans un projet Symfony moderne, car ils permettent de créer des applications web réactives sans la complexité de Node.js et Webpack. [fsck](https://fsck.sh/en/blog/symfony-assetmapper-no-webpack/)
 
 ## Stimulus
