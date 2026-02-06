@@ -1,143 +1,91 @@
-https://symfony.com/doc/current/best_practices.html
+Voici un **résumé clair et synthétique de ta doc** 👇
 
-your_project/
-├─ assets/
-├─ bin/
-│  └─ console
-├─ config/
-│  ├─ packages/
-│  ├─ routes/
-│  └─ services.yaml
-├─ migrations/
-├─ public/
-│  ├─ build/
-│  └─ index.php
-├─ src/
-│  ├─ Kernel.php
-│  ├─ Command/
-│  ├─ Controller/
-│  ├─ DataFixtures/
-│  ├─ Entity/
-│  ├─ EventSubscriber/
-│  ├─ Form/
-│  ├─ Repository/
-│  ├─ Security/
-│  └─ Twig/
-├─ templates/
-├─ tests/
-├─ translations/
-├─ var/
-│  ├─ cache/
-│  └─ log/
-└─ vendor/
+---
 
-Oui, c'est tout à fait recommandé d'utiliser Stimulus, Turbo et AssetMapper dans un projet Symfony moderne, car ils permettent de créer des applications web réactives sans la complexité de Node.js et Webpack. [fsck](https://fsck.sh/en/blog/symfony-assetmapper-no-webpack/)
+## Structure du projet Symfony
 
-## Stimulus
+Le projet suit l’architecture standard Symfony :
 
-**Stimulus** est un framework JavaScript léger qui permet d'ajouter des comportements dynamiques et interactifs aux éléments HTML en associant des contrôleurs JavaScript aux éléments du DOM. [laconsole](https://laconsole.dev/formations/symfony/asset-mapper)
+* **assets/** : JavaScript, CSS, contrôleurs Stimulus
+* **bin/** : scripts exécutables (console Symfony)
+* **config/** : configuration (services, routes, packages)
+* **migrations/** : migrations Doctrine
+* **public/** : point d’entrée web (`index.php`) et assets compilés
+* **src/** : cœur de l’application (Controllers, Entities, Forms, Security, etc.)
+* **templates/** : vues Twig
+* **tests/** : tests automatisés
+* **translations/** : fichiers de traduction
+* **var/** : cache et logs
+* **vendor/** : dépendances PHP (Composer)
 
-**Cas d'utilisation** : Ajouter de l'interactivité côté client (modales, menus déroulants, validation de formulaires, requêtes Ajax) sans réécrire tout votre HTML en JavaScript.
+---
 
-**Exemple de code** :
+## Stack front moderne sans Node.js
 
-```javascript
-// assets/controllers/song-controls_controller.js
-import { Controller } from '@hotwired/stimulus';
-import axios from 'axios';
+Symfony recommande l’utilisation conjointe de **Stimulus**, **Turbo** et **AssetMapper** pour créer des applications dynamiques sans Webpack ni npm.
 
-export default class extends Controller {
-    async play(event) {
-        event.preventDefault();
-        const response = await axios.get('/api/song/play');
-        console.log('Playing song:', response.data);
-    }
-}
-```
+### AssetMapper
 
-```twig
-{# templates/song/index.html.twig #}
-<div {{ stimulus_controller('song-controls') }}>
-    <a href="#" {{ stimulus_action('song-controls', 'play') }}>
-        <i class="fas fa-play"></i>
-    </a>
-</div>
-```
+* Gestion native des assets (JS/CSS) via **import maps**
+* Pas de Node.js, pas de build complexe
+* Idéal pour les projets Symfony “PHP-first”
 
-## Turbo
+👉 Il sert de **socle technique** pour charger Stimulus et Turbo.
 
-**Turbo** transforme automatiquement les clics sur les liens et les soumissions de formulaires en requêtes Ajax, offrant une expérience similaire à une Single Page Application sans rechargements complets de page. [symfony](https://symfony.com/bundles/ux-turbo)
+---
 
-**Cas d'utilisation** : Accélérer la navigation et améliorer l'UX en remplaçant des parties spécifiques de la page sans rechargement complet (listes dynamiques, notifications en temps réel).
+## Turbo vs Stimulus : rôles complémentaires
 
-**Exemple de code** :
+### Turbo
 
-```php
-// src/Controller/TaskController.php
-use Symfony\UX\Turbo\TurboBundle;
+* Intercepte automatiquement les **liens** et **formulaires**
+* Transforme la navigation en requêtes Ajax
+* Donne une expérience **SPA sans rechargement de page**
+* Permet des mises à jour partielles via **Turbo Frames** et **Turbo Streams**
 
-public function create(Request $request): Response
-{
-    // ... traitement du formulaire
-    
-    if (TurboBundle::STREAM_FORMAT === $request->getPreferredFormat()) {
-        $request->setRequestFormat(TurboBundle::STREAM_FORMAT);
-        return $this->renderBlock('task/new.html.twig', 'success_stream', [
-            'task' => $task,
-        ]);
-    }
-    
-    return $this->redirectToRoute('task_success');
-}
-```
+**À utiliser pour :**
 
-```twig
-{# templates/task/new.html.twig #}
-{% block success_stream %}
-    <turbo-stream action="append" targets="#tasks-list">
-        <template>
-            <div id="task_{{ task.id }}">{{ task.title }}</div>
-        </template>
-    </turbo-stream>
-{% endblock %}
-```
+* Navigation entre pages
+* Soumissions de formulaires
+* Rafraîchissement partiel de contenu
+* Temps réel (avec Mercure)
 
-## AssetMapper
+---
 
-**AssetMapper** est le système natif PHP de gestion d'assets qui utilise les modules ES et les import maps du navigateur, éliminant le besoin de Webpack, Node.js et npm. [symfony](https://symfony.com/blog/new-in-symfony-6-3-assetmapper-component)
+### Stimulus
 
-**Cas d'utilisation** : Gérer vos fichiers JavaScript, CSS et leurs dépendances dans des projets qui utilisent Stimulus/Turbo sans nécessiter une chaîne de build complexe.
+* Framework JavaScript léger basé sur des **contrôleurs**
+* Ajoute de l’interactivité ciblée au HTML existant
+* JavaScript structuré, minimal et lisible
 
-**Exemple de code** :
+**À utiliser pour :**
 
-```yaml
-# config/packages/asset_mapper.yaml
-framework:
-    asset_mapper:
-        paths:
-            - assets/
-```
+* Modales, menus, toggles
+* Validation en temps réel
+* Autocomplétion, animations
+* Interactions spécifiques non couvertes par Turbo
 
-```php
-// importmap.php
-return [
-    'app' => [
-        'path' => './assets/app.js',
-        'entrypoint' => true,
-    ],
-    '@hotwired/stimulus' => [
-        'version' => '3.2.2',
-    ],
-    '@symfony/stimulus-bundle' => [
-        'path' => '@symfony/stimulus-bundle/loader.js',
-    ],
-];
-```
+---
 
-```javascript
-// assets/app.js
-import './bootstrap.js';
-import './styles/app.css';
-```
+## Bonnes pratiques
 
-**Verdict** : Cette combinaison est idéale pour les projets Symfony modernes qui n'ont pas besoin de frameworks JavaScript lourds comme React ou Vue. [fsck](https://fsck.sh/en/blog/symfony-assetmapper-no-webpack/)
+* **Turbo** gère la navigation et les mises à jour automatiques
+* **Stimulus** ajoute la logique JS personnalisée
+* **Fetch / Axios** restent utiles pour :
+
+  * Appels API complexes
+  * Logique métier côté client
+  * Cas hors des patterns Turbo
+
+---
+
+## Verdict
+
+👉 **Turbo + Stimulus + AssetMapper** est une combinaison idéale pour :
+
+* Des projets Symfony modernes
+* Une UX fluide
+* Moins de JavaScript
+* Zéro dépendance à des frameworks lourds (React, Vue)
+
+Simple, efficace, maintenable 💙
