@@ -1,43 +1,82 @@
-Parfait — voici **ta doc complète avec la check-list intégrée proprement**, prête à être copiée/collée 👍
-(j’ai juste ajouté une section, rien modifié au reste)
+***
 
----
+# Documentation complète : Symfony + AssetMapper + Turbo + Stimulus
 
-# Voici un **résumé clair et synthétique de ta doc** 👇
-
----
+***
 
 ## Structure du projet Symfony
 
-Le projet suit l’architecture standard Symfony :
+Le projet suit l'architecture standard Symfony :
 
 * **assets/** : JavaScript, CSS, contrôleurs Stimulus
 * **bin/** : scripts exécutables (console Symfony)
 * **config/** : configuration (services, routes, packages)
 * **migrations/** : migrations Doctrine
-* **public/** : point d’entrée web (`index.php`) et assets compilés
-* **src/** : cœur de l’application (Controllers, Entities, Forms, Security, etc.)
+* **public/** : point d'entrée web (`index.php`) et assets compilés
+* **src/** : cœur de l'application (Controllers, Entities, Forms, Security, etc.)
 * **templates/** : vues Twig
 * **tests/** : tests automatisés
 * **translations/** : fichiers de traduction
 * **var/** : cache et logs
 * **vendor/** : dépendances PHP (Composer)
 
----
+***
 
-## Stack front moderne sans Node.js
+## AssetMapper : gestion moderne des assets sans build
 
-Symfony recommande l’utilisation conjointe de **Stimulus**, **Turbo** et **AssetMapper** pour créer des applications dynamiques sans Webpack ni npm.
+**AssetMapper** est le système recommandé par Symfony pour gérer tes assets (CSS, JavaScript, images) de manière simple et moderne. [symfony](https://symfony.com/doc/current/frontend/asset_mapper.html)
 
-### AssetMapper
+### Principe de fonctionnement
 
-* Gestion native des assets (JS/CSS) via **import maps**
-* Pas de Node.js, pas de build complexe
-* Idéal pour les projets Symfony “PHP-first”
+* **Aucun bundler** (pas de Webpack, Vite, npm) requis [symfony](https://symfony.com/doc/current/frontend/asset_mapper.html)
+* Utilise les **import maps** natifs du navigateur pour charger les modules JavaScript [symfony](https://symfony.com/blog/new-in-symfony-6-3-assetmapper-component)
+* Versionne automatiquement les fichiers pour le **cache busting** [symfony](https://symfony.com/doc/current/frontend/asset_mapper.html)
+* Compile les assets pour la production via une simple commande [laconsole](https://laconsole.dev/formations/symfony/asset-mapper)
 
-👉 Il sert de **socle technique** pour charger Stimulus et Turbo.
+### Configuration de base
 
----
+Le fichier `config/packages/asset_mapper.yaml` définit les répertoires d'assets  : [laconsole](https://laconsole.dev/formations/symfony/asset-mapper)
+
+```yaml
+framework:
+  asset_mapper:
+    paths:
+      - assets/
+```
+
+Le fichier `importmap.php` à la racine du projet mappe les modules JavaScript  : [symfony](https://symfony.com/blog/new-in-symfony-6-3-assetmapper-component)
+
+```php
+return [
+  'app' => [
+    'path' => './assets/app.js',
+    'entrypoint' => true,
+  ],
+  '@hotwired/stimulus' => [
+    'version' => '3.2.1',
+  ],
+];
+```
+
+### Fonctionnement en développement vs production
+
+**En développement** : le serveur Symfony sert automatiquement les assets depuis le dossier `assets/`. [laconsole](https://laconsole.dev/formations/symfony/asset-mapper)
+
+**En production** : la commande `php bin/console asset-map:compile` copie tous les assets versionnés dans `public/assets/` et génère les fichiers `manifest.json` et `importmap.json` pour un chargement ultra-rapide. [symfony](https://symfony.com/blog/new-in-symfony-6-3-assetmapper-component)
+
+### Intégration avec Stimulus et Turbo
+
+AssetMapper permet d'importer directement Stimulus et Turbo dans ton JavaScript  : [discourse.hkvstore](https://discourse.hkvstore.com/t/using-symfony-stimulus-bundle-with-assetmapper/11253)
+
+```javascript
+// assets/app.js
+import { Application } from '@hotwired/stimulus';
+import './stimulus_bootstrap.js';
+```
+
+Les contrôleurs Stimulus placés dans `assets/controllers/` sont automatiquement découverts et chargés. [discourse.hkvstore](https://discourse.hkvstore.com/t/using-symfony-stimulus-bundle-with-assetmapper/11253)
+
+***
 
 ## Turbo vs Stimulus : rôles complémentaires
 
@@ -55,12 +94,12 @@ Symfony recommande l’utilisation conjointe de **Stimulus**, **Turbo** et **Ass
 * Rafraîchissement partiel de contenu
 * Temps réel (avec Mercure)
 
----
+***
 
 ### Stimulus
 
 * Framework JavaScript léger basé sur des **contrôleurs**
-* Ajoute de l’interactivité ciblée au HTML existant
+* Ajoute de l'interactivité ciblée au HTML existant
 * JavaScript structuré, minimal et lisible
 
 **À utiliser pour :**
@@ -70,19 +109,19 @@ Symfony recommande l’utilisation conjointe de **Stimulus**, **Turbo** et **Ass
 * Autocomplétion, animations
 * Interactions spécifiques non couvertes par Turbo
 
----
+***
 
 ## Bonnes pratiques
 
+* **AssetMapper** gère le chargement et le versionnement des assets
 * **Turbo** gère la navigation et les mises à jour automatiques
 * **Stimulus** ajoute la logique JS personnalisée
 * **Fetch / Axios** restent utiles pour :
-
   * Appels API complexes
   * Logique métier côté client
   * Cas hors des patterns Turbo
 
----
+***
 
 ## Check-list : Turbo, Stimulus ou Fetch ?
 
@@ -96,7 +135,7 @@ Symfony recommande l’utilisation conjointe de **Stimulus**, **Turbo** et **Ass
 
 👉 **Règle** : *serveur → HTML → DOM*
 
----
+***
 
 ### 🎛️ Utilise **Stimulus** si :
 
@@ -109,7 +148,7 @@ Symfony recommande l’utilisation conjointe de **Stimulus**, **Turbo** et **Ass
 
 👉 **Règle** : *état UI local → JavaScript → DOM*
 
----
+***
 
 ### 🌐 Utilise **Fetch / Axios** si :
 
@@ -120,24 +159,25 @@ Symfony recommande l’utilisation conjointe de **Stimulus**, **Turbo** et **Ass
 
 👉 **Règle** : *données → JSON → logique client*
 
----
+***
 
 ## Règle mentale rapide 🧠
 
+> **AssetMapper** = chargement et versionnement des assets
 > **Turbo** = navigation et rendu serveur
-> **Stimulus** = état et interactivité de l’interface
+> **Stimulus** = état et interactivité de l'interface
 > **Fetch** = données et logique client
 
----
+***
 
 ## Verdict
 
-👉 **Turbo + Stimulus + AssetMapper** est une combinaison idéale pour :
+👉 **AssetMapper + Turbo + Stimulus** est une combinaison idéale pour :
 
 * Des projets Symfony modernes
 * Une UX fluide
 * Moins de JavaScript
 * Zéro dépendance à des frameworks lourds (React, Vue)
+* Zéro build complexe (pas de Webpack, npm, Node.js)
 
 Simple, efficace, maintenable 💙
-
