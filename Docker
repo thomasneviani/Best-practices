@@ -1,0 +1,102 @@
+Voici la configuration complète pour utiliser Xdebug avec VSCode et Docker pour votre environnement PHP.[1][2]
+
+## Configuration Docker
+
+### Dockerfile
+
+Ajoutez l'installation de Xdebug dans votre Dockerfile:[2]
+
+```dockerfile
+RUN pecl install xdebug \
+    && docker-php-ext-enable xdebug
+```
+
+### Fichier de configuration Xdebug
+
+Créez un fichier `xdebug.ini` (ou `90-xdebug.ini`) à copier dans votre container:[3][1]
+
+```ini
+[xdebug]
+zend_extension=xdebug
+xdebug.mode=develop,debug
+xdebug.start_with_request=yes
+xdebug.client_host=host.docker.internal
+xdebug.client_port=9003
+xdebug.idekey=VSCODE
+xdebug.log=/tmp/xdebug.log
+```
+
+### docker-compose.yml
+
+Ajoutez les variables d'environnement nécessaires:[4]
+
+```yaml
+services:
+  php:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/var/www/html
+    environment:
+      XDEBUG_MODE: develop,debug
+      XDEBUG_CONFIG: client_host=host.docker.internal
+    # Pour Linux/Mac uniquement
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+```
+
+## Configuration VSCode
+
+### Extension requise
+
+Installez l'extension **PHP Debug** de Felix Becker depuis le marketplace VSCode.[1]
+
+### Fichier launch.json
+
+Créez ou modifiez le fichier `.vscode/launch.json` à la racine de votre projet:[2][1]
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Listen for Xdebug",
+            "type": "php",
+            "request": "launch",
+            "port": 9003,
+            "pathMappings": {
+                "/var/www/html": "${workspaceFolder}"
+            }
+        }
+    ]
+}
+```
+
+**Important** : Adaptez le `pathMappings` selon votre configuration:[2]
+- La clé (à gauche) : chemin **dans le container** Docker
+- La valeur (à droite) : chemin local de votre projet
+
+## Utilisation
+
+1. Démarrez vos containers : `docker-compose up --build`
+2. Dans VSCode, allez dans l'onglet "Run and Debug" (Ctrl+Shift+D)
+3. Sélectionnez "Listen for Xdebug" et cliquez sur le bouton play
+4. Placez des breakpoints dans votre code PHP
+5. Accédez à votre application via le navigateur[1]
+
+## Vérification
+
+Pour vérifier que Xdebug est bien installé, créez un fichier PHP avec `<?php phpinfo(); ?>` et recherchez la section "xdebug". Si vous rencontrez des problèmes, consultez le fichier de log `/tmp/xdebug.log` dans votre container pour diagnostiquer les erreurs de connexion.[3][4]
+
+Sources
+[1] Xdebug in VSCode with Docker https://dev.to/jackmiras/xdebug-in-vscode-with-docker-379l
+[2] Setting up XDebug 3 on a Docker Container with Visual ... https://stevegeorge.net/2022/02/10/setting-up-xdebug-3-on-a-docker-container-with-visual-studio-code/
+[3] Debugging PHP with XDebug v3 inside Docker using VSCode https://gist.github.com/carlosleonam/e3f82de601b8f1af7321c9452b1930cb
+[4] Setup Xdebug WITH DOCKER and debug in VSCode https://www.youtube.com/watch?v=it7JQKPfWTU
+[5] Trouble setting up Xdebug in VSCode with Docker Containers https://stackoverflow.com/questions/76920474/trouble-setting-up-xdebug-in-vscode-with-docker-containers
+[6] Configuring Xdebug for Step Debugging in a Docker Container https://www.youtube.com/watch?v=nyf4togHNYA
+[7] VSCode + Docker + PHPUNIT + XDEBUG SETUP https://www.giulioprinaricotti.com/blog/vscode-docker-phpunit-xdebug-setup
+[8] PHP docker pathMappings doubt · mfussenegger nvim-dap · Discussion #540 https://github.com/mfussenegger/nvim-dap/discussions/540
+[9] Setting up Xdebug for VSCode in an Docker Environment 🙌 https://dev.to/fuxide/setting-up-xdebug-for-vscode-in-an-docker-environment-27a9
+[10] xDebug not working using docker, vscode and WSL 2 https://stackoverflow.com/questions/62026240/xdebug-not-working-using-docker-vscode-and-wsl-2
