@@ -105,3 +105,77 @@ Sources
 [8] Setting up xdebug with WSL2 and VS Code · Issue #623 · markshust/docker-magento https://github.com/markshust/docker-magento/issues/623
 [9] Setup Xdebug WITH DOCKER and debug in VSCode https://www.youtube.com/watch?v=it7JQKPfWTU
 [10] Xdebug3 + WSL2 https://intellij-support.jetbrains.com/hc/en-us/community/posts/360010615740-Xdebug3-WSL2
+
+Oui, c'est **fortement recommandé** et même presque indispensable pour que tout fonctionne correctement.[1][2]
+
+## Pourquoi lancer VSCode dans WSL ?
+
+### Problème de performance
+
+Si vous ouvrez VSCode depuis Windows et accédez aux fichiers WSL via le montage `/mnt/c/`, vous subirez des performances très dégradées. L'accès au système de fichiers Linux depuis Windows est beaucoup plus lent.[3][4]
+
+### Problème de réseau pour Xdebug
+
+Quand Docker tourne dans WSL2 et que vous lancez VSCode depuis Windows, Xdebug doit traverser plusieurs couches réseau (container → WSL → Windows), ce qui complique énormément la configuration. En lançant VSCode dans WSL, vous simplifiez : container → VSCode dans WSL sur le même réseau.[2][5]
+
+## Comment lancer VSCode dans WSL
+
+### Méthode 1 : Depuis le terminal WSL
+
+Ouvrez votre terminal WSL (Ubuntu, Debian, etc.), naviguez vers votre projet et tapez  :[1]
+
+```bash
+cd /home/votre-user/votre-projet
+code .
+```
+
+VSCode s'ouvrira et vous verrez **"WSL: Ubuntu"** (ou votre distribution) affiché en bas à gauche de la fenêtre.[2][1]
+
+### Méthode 2 : Depuis VSCode Windows
+
+1. Installez l'extension **Remote - WSL** (Microsoft)
+2. Appuyez sur `F1` et tapez "WSL: Open Folder in WSL..."
+3. Sélectionnez votre dossier projet
+
+## Configuration avec WSL
+
+Une fois VSCode lancé en mode WSL  :[2]
+
+1. **Installez les extensions dans WSL** : Vos extensions (comme PHP Debug) doivent être installées dans l'instance WSL de VSCode, pas seulement dans Windows
+2. **Le launch.json reste identique** :
+
+```json
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Listen for Xdebug",
+            "type": "php",
+            "request": "launch",
+            "port": 9003,
+            "hostname": "localhost",
+            "pathMappings": {
+                "/var/www/html": "${workspaceFolder}"
+            }
+        }
+    ]
+}
+```
+
+Notez le `"hostname": "localhost"` qui est important car VSCode dans WSL écoute sur le localhost de WSL où Docker envoie les connexions.[2]
+
+## Alternatives
+
+Techniquement, vous pouvez garder VSCode sur Windows, mais il faudrait alors récupérer l'IP de WSL manuellement et la configurer dans Xdebug, ce qui est beaucoup plus complexe et fragile. La méthode Remote-WSL est plus simple et plus performante.[6][7][8]
+
+Sources
+[1] Xdebug connection with VSC with WSL2 and Docker https://stackoverflow.com/questions/68404559/xdebug-connection-with-vsc-with-wsl2-and-docker
+[2] Configure Xdebug on localhost, WSL, a remote server, and a Docker container with VS Code. https://www.linkedin.com/pulse/configure-xdebug-localhost-wsl-remote-server-docker-container-yavari-dexgf
+[3] Is ‘Remote - WSL’ VSCode extension necessary for WSL 2? https://www.reddit.com/r/bashonubuntuonwindows/comments/hcpto5/is_remote_wsl_vscode_extension_necessary_for_wsl_2/
+[4] Is it better to use JetBrains IDEs in WSL or fine to use Windows ... https://www.reddit.com/r/bashonubuntuonwindows/comments/qtkr5y/is_it_better_to_use_jetbrains_ides_in_wsl_or_fine/
+[5] Xdebug Not Working with Windows 10, WSL and VS Code · Issue #294 · 10up/wp-local-docker-v2 https://github.com/10up/wp-local-docker-v2/issues/294
+[6] xDebug not working using docker, vscode and WSL 2 https://stackoverflow.com/questions/62026240/xdebug-not-working-using-docker-vscode-and-wsl-2
+[7] Want Xdebug -- Using Win10 WSL Ubuntu 20, vscode and Laravel https://stackoverflow.com/questions/62723358/want-xdebug-using-win10-wsl-ubuntu-20-vscode-and-laravel
+[8] Remote Dev with SSH, VMs, and WSL https://microsoft.github.io/vscode-website-videos/remote/remote-dev-with-ssh-vms-wsl/
+[9] Using xdebug with Windows 10, WSL2, Docker and VS Code https://gist.github.com/antfroger/1f2b24fdba0f215a41c8a94e8aa062f7
+[10] Setting up Xdebug 3 in WSL2 and docker with VSCode https://community.open-emr.org/t/setting-up-xdebug-3-in-wsl2-and-docker-with-vscode/21277
