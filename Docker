@@ -1,60 +1,77 @@
-Voici la configuration complète pour utiliser Xdebug avec VSCode et Docker pour votre environnement PHP.[1][2]
+Oui, WSL2 nécessite quelques ajustements spécifiques pour que Xdebug fonctionne correctement avec Docker et VSCode.[1][2]
 
-## Configuration Docker
+## Différences avec WSL2
 
-### Dockerfile
+### Problème de connexion réseau
 
-Ajoutez l'installation de Xdebug dans votre Dockerfile:[2]
+Sous WSL2, `host.docker.internal` ne fonctionne pas toujours correctement par défaut. Il faut donc utiliser une configuration alternative plus fiable.[3][4]
 
-```dockerfile
-RUN pecl install xdebug \
-    && docker-php-ext-enable xdebug
+### Pare-feu Windows
+
+Vous devez créer une règle dans Windows Defender pour autoriser les connexions depuis WSL2. Ouvrez PowerShell en tant qu'administrateur et exécutez :[2]
+
+```powershell
+New-NetFirewallRule -DisplayName "WSL" -Direction Inbound -InterfaceAlias "vEthernet (WSL)" -Action Allow
 ```
 
-### Fichier de configuration Xdebug
+## Configuration Docker pour WSL2
 
-Créez un fichier `xdebug.ini` (ou `90-xdebug.ini`) à copier dans votre container:[3][1]
+### xdebug.ini
+
+Modifiez votre configuration Xdebug  :[4][5]
 
 ```ini
 [xdebug]
 zend_extension=xdebug
 xdebug.mode=develop,debug
 xdebug.start_with_request=yes
-xdebug.client_host=host.docker.internal
+xdebug.discover_client_host=0
 xdebug.client_port=9003
-xdebug.idekey=VSCODE
+xdebug.client_host=host.docker.internal
 xdebug.log=/tmp/xdebug.log
 ```
 
+**Important** : Désactivez `xdebug.discover_client_host` car il ne fonctionne presque jamais avec WSL2 et Docker.[6][2]
+
 ### docker-compose.yml
 
-Ajoutez les variables d'environnement nécessaires:[4]
+Ajoutez impérativement `extra_hosts` pour que `host.docker.internal` soit résolu  :[7]
 
 ```yaml
 services:
   php:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
     volumes:
       - ./:/var/www/html
     environment:
       XDEBUG_MODE: develop,debug
-      XDEBUG_CONFIG: client_host=host.docker.internal
-    # Pour Linux/Mac uniquement
     extra_hosts:
       - "host.docker.internal:host-gateway"
 ```
 
-## Configuration VSCode
+L'option `host-gateway` est supportée depuis Docker 20.10 et mappe automatiquement vers l'IP de l'hôte.[7]
 
-### Extension requise
+## Configuration VSCode pour WSL2
 
-Installez l'extension **PHP Debug** de Felix Becker depuis le marketplace VSCode.[1]
+### Extensions requises
 
-### Fichier launch.json
+Installez ces deux extensions  :[2]
+1. **WSL** (Microsoft officiel)
+2. **PHP Debug** (Felix Becker)
 
-Créez ou modifiez le fichier `.vscode/launch.json` à la racine de votre projet:[2][1]
+### Ouvrir le projet correctement
+
+**Crucial** : Ouvrez VSCode **depuis WSL**, pas depuis Windows. Dans votre terminal WSL, tapez :[2]
+
+```bash
+code .
+```
+
+VSCode doit afficher "WSL: Ubuntu" (ou votre distro) dans le coin inférieur gauche.
+
+### launch.json
+
+Même configuration que précédemment :
 
 ```json
 {
@@ -73,30 +90,18 @@ Créez ou modifiez le fichier `.vscode/launch.json` à la racine de votre projet
 }
 ```
 
-**Important** : Adaptez le `pathMappings` selon votre configuration:[2]
-- La clé (à gauche) : chemin **dans le container** Docker
-- La valeur (à droite) : chemin local de votre projet
+## Astuce de dépannage
 
-## Utilisation
-
-1. Démarrez vos containers : `docker-compose up --build`
-2. Dans VSCode, allez dans l'onglet "Run and Debug" (Ctrl+Shift+D)
-3. Sélectionnez "Listen for Xdebug" et cliquez sur le bouton play
-4. Placez des breakpoints dans votre code PHP
-5. Accédez à votre application via le navigateur[1]
-
-## Vérification
-
-Pour vérifier que Xdebug est bien installé, créez un fichier PHP avec `<?php phpinfo(); ?>` et recherchez la section "xdebug". Si vous rencontrez des problèmes, consultez le fichier de log `/tmp/xdebug.log` dans votre container pour diagnostiquer les erreurs de connexion.[3][4]
+Si vous rencontrez toujours des problèmes de connexion, démarrez "Listen for Xdebug" dans VSCode **avant** de lancer vos containers Docker. Cela peut résoudre certains problèmes de timing dans l'établissement de la connexion.[2]
 
 Sources
-[1] Xdebug in VSCode with Docker https://dev.to/jackmiras/xdebug-in-vscode-with-docker-379l
-[2] Setting up XDebug 3 on a Docker Container with Visual ... https://stevegeorge.net/2022/02/10/setting-up-xdebug-3-on-a-docker-container-with-visual-studio-code/
-[3] Debugging PHP with XDebug v3 inside Docker using VSCode https://gist.github.com/carlosleonam/e3f82de601b8f1af7321c9452b1930cb
-[4] Setup Xdebug WITH DOCKER and debug in VSCode https://www.youtube.com/watch?v=it7JQKPfWTU
-[5] Trouble setting up Xdebug in VSCode with Docker Containers https://stackoverflow.com/questions/76920474/trouble-setting-up-xdebug-in-vscode-with-docker-containers
-[6] Configuring Xdebug for Step Debugging in a Docker Container https://www.youtube.com/watch?v=nyf4togHNYA
-[7] VSCode + Docker + PHPUNIT + XDEBUG SETUP https://www.giulioprinaricotti.com/blog/vscode-docker-phpunit-xdebug-setup
-[8] PHP docker pathMappings doubt · mfussenegger nvim-dap · Discussion #540 https://github.com/mfussenegger/nvim-dap/discussions/540
-[9] Setting up Xdebug for VSCode in an Docker Environment 🙌 https://dev.to/fuxide/setting-up-xdebug-for-vscode-in-an-docker-environment-27a9
-[10] xDebug not working using docker, vscode and WSL 2 https://stackoverflow.com/questions/62026240/xdebug-not-working-using-docker-vscode-and-wsl-2
+[1] Using xdebug with Windows 10, WSL2, Docker and VS Code https://gist.github.com/antfroger/1f2b24fdba0f215a41c8a94e8aa062f7
+[2] Xdebug connection with VSC with WSL2 and Docker https://stackoverflow.com/questions/68404559/xdebug-connection-with-vsc-with-wsl2-and-docker
+[3] WSL2 users sometimes have trouble with xdebug configuration · Issue #4803 · ddev/ddev https://github.com/ddev/ddev/issues/4803
+[4] How to get Xdebug working on Windows WSL2 Docker container? https://stackoverflow.com/questions/75194372/how-to-get-xdebug-working-on-windows-wsl2-docker-container
+[5] Setting up Xdebug 3 in WSL2 and docker with VSCode https://community.open-emr.org/t/setting-up-xdebug-3-in-wsl2-and-docker-with-vscode/21277
+[6] WP-Env: XDebug requires configuration to support WSL2 · Issue #30703 · WordPress/gutenberg https://github.com/WordPress/gutenberg/issues/30703
+[7] WSL2のみで動くDockerでxdebugを使ったリモートデバッグが ... https://zenn.dev/taiga533/articles/343bfbbb79cac7
+[8] Setting up xdebug with WSL2 and VS Code · Issue #623 · markshust/docker-magento https://github.com/markshust/docker-magento/issues/623
+[9] Setup Xdebug WITH DOCKER and debug in VSCode https://www.youtube.com/watch?v=it7JQKPfWTU
+[10] Xdebug3 + WSL2 https://intellij-support.jetbrains.com/hc/en-us/community/posts/360010615740-Xdebug3-WSL2
