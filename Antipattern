@@ -1,0 +1,132 @@
+Oui, tu fais probablement l'anti-pattern **"Sinkhole"** (ou "Pass-Through Layer"). C'est l'un des anti-patterns les plus courants en architecture en couches.[1][2]
+
+## Signes que tu fais un anti-pattern
+
+Tu es dans un anti-pattern si tes application services font ça  :[2][1]
+
+```php
+// ❌ Anti-pattern : Sinkhole / Pass-through
+class OrderApplicationService
+{
+    public function __construct(
+        private OrderCreationService $orderCreationService
+    ) {}
+    
+    public function createOrder(CreateOrderCommand $command): void
+    {
+        // Juste une redirection, 0 logique ajoutée
+        $this->orderCreationService->createOrder(
+            $command->customerId,
+            $command->items,
+            $command->totalAmount
+        );
+    }
+}
+```
+
+**Le problème** : Cette couche ne fait que transmettre les appels sans ajouter de valeur. Elle crée une "abstraction inutile" (Unnecessary Abstraction)  qui rend le code plus complexe à maintenir.[3][4][5][2]
+
+## La règle des 80/20
+
+En architecture, on considère qu'un système a un problème si **plus de 80% des requêtes traversent les couches sans traitement**. Si tes application services ne font que du pass-through, c'est un signal d'alarme.[2]
+
+## Les solutions
+
+### Solution 1 : Supprimer la couche inutile
+
+```php
+// ✅ Handler appelle directement le domain service
+#[AsMessageHandler]
+final readonly class CreateOrderCommandHandler
+{
+    public function __construct(
+        private OrderCreationService $orderCreationService // Domain Service
+    ) {}
+
+    public function __invoke(CreateOrderCommand $command): void
+    {
+        $this->orderCreationService->createOrder(
+            $command->customerId,
+            $command->items,
+            $command->totalAmount
+        );
+    }
+}
+```
+
+### Solution 2 : Donner un vrai rôle à l'application service
+
+Si tu gardes la couche application service, elle doit avoir une vraie responsabilité  :[6][7]
+
+```php
+// ✅ Application Service qui orchestre et gère les transactions
+final readonly class OrderApplicationService
+{
+    public function __construct(
+        private OrderCreationService $orderCreationService,
+        private EntityManagerInterface $entityManager,
+        private EventDispatcherInterface $eventDispatcher
+    ) {}
+    
+    public function createOrder(CreateOrderCommand $command): void
+    {
+        $this->entityManager->beginTransaction();
+        
+        try {
+            $order = $this->orderCreationService->createOrder(
+                $command->customerId,
+                $command->items,
+                $command->totalAmount
+            );
+            
+            $this->entityManager->commit();
+            
+            // Responsabilité applicative : dispatch des events
+            $this->eventDispatcher->dispatch(
+                new OrderCreatedEvent($order->getId())
+            );
+        } catch (\Exception $e) {
+            $this->entityManager->rollback();
+            throw $e;
+        }
+    }
+}
+```
+
+## Rôles clairs selon DDD
+
+**Application Service**  :[7][6]
+- Coordination de use cases
+- Gestion des transactions
+- Dispatch d'events applicatifs
+- Ne contient PAS de logique métier
+
+**Domain Service**  :[6][7]
+- Logique métier qui ne va pas dans une entité
+- Coordination entre plusieurs entités
+- Règles métier complexes
+- Réutilisable dans plusieurs use cases
+
+**La règle** : Si ton application service ne fait qu'appeler un domain service sans rien ajouter d'autre, **supprime-le**. Le handler peut directement appeler le domain service.[3][2]
+
+Sources
+[1] Resolving a call-chain anti-pattern https://stackoverflow.com/questions/5394328/resolving-a-call-chain-anti-pattern
+[2] Architecture Sinkhole https://softwarearchitecture.fr/commun_antipattern/sinkhole_antipattern
+[3] TOO MANY LAYERS MAKE CODE HARDER TO MAINTAIN (AND ... https://blog.vvauban.com/blog/too-many-layers-make-code-harder-to-maintain-and-extend
+[4] [PDF] Design Smell Analysis for Developing and Established Open Source ... https://arxiv.org/pdf/1910.05428.pdf
+[5] How do Design Patterns relate to Code Smell? - GeeksforGeeks https://www.geeksforgeeks.org/system-design/how-do-design-patterns-relate-to-code-smell/
+[6] Application Services vs. Domain Services - Kinda Technical https://kindatechnical.com/domain-driven-design/lesson-34-application-services-vs-domain-services.html
+[7] The Difference between Application Services and Domain Services ... https://nimmneun.com/random/difference-between-application-and-domain-services
+[8] DI anti patterns - Abilian Innovation Lab https://lab.abilian.com/Tech/Architecture%20&%20Software%20Design/Dependency%20Inversion/DI%20anti-patterns/
+[9] Service-Based Antipatterns https://xjreb.github.io/service-based-antipatterns/
+[10] Catalog and detection techniques of microservice anti-patterns and ... https://www.sciencedirect.com/science/article/pii/S0164121223002248
+[11] [PDF] Architectural Anti-Pattern Identification and Mitigation in ... https://www.akesson.nl/files/students/rohne-thesis.pdf
+[12] The Ultimate Guide to Code Smells for Cleaner, Stronger Code - Axify https://axify.io/blog/code-smells
+[13] Is entity based service an anti pattern in non microservice application ? https://www.reddit.com/r/softwarearchitecture/comments/11r6ti2/is_entity_based_service_an_anti_pattern_in_non/
+[14] DDD : Domain-Driven Design (Théorie & Pratique) - Alex so yes https://alexsoyes.com/ddd-domain-driven-design/
+[15] How to implement an Anti-Corruption Layer correctly - Stack Overflow https://stackoverflow.com/questions/17868217/how-to-implement-an-anti-corruption-layer-correctly
+[16] [DDD] Tactical Design Patterns Part 1: Domain Layer https://dev.to/minericefield/ddd-tactical-design-patterns-part-1-domain-layer-j38
+[17] DDD, Anti Corruption layer, how-to? https://stackoverflow.com/questions/909264/ddd-anti-corruption-layer-how-to
+[18] Constraint Examples https://florian-kraemer.net/software-architecture/2024/02/16/About-Validation-and-Anti-Corruption-Layers.html
+[19] Design smell - Wikipedia https://en.wikipedia.org/wiki/Design_smell
+[20] DDD Anti-patterns: 5 things we get wrong with Domain Driven ... https://alok-mishra.com/2021/11/03/ddd-anti-patterns/
