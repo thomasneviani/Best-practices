@@ -1,0 +1,67 @@
+Oui, c'est tout à fait possible ! Symfony intègre cette fonctionnalité de manière native.[1][2]
+
+## Fonctionnement automatique
+
+Par défaut, lorsqu'un utilisateur non authentifié tente d'accéder à une page protégée, Symfony sauvegarde automatiquement l'URL actuelle dans la session avant de le rediriger vers la page de login. Après une authentification réussie, cette URL sauvegardée est utilisée pour rediriger l'utilisateur.[2]
+
+## Configuration dans security.yaml
+
+Tu peux configurer ce comportement dans ton firewall:[3][4]
+
+```yaml
+security:
+    firewalls:
+        main:
+            form_login:
+                # URL par défaut si aucune page précédente n'est sauvegardée
+                default_target_path: /dashboard
+                
+                # false = utilise l'URL sauvegardée (comportement par défaut)
+                always_use_default_target_path: false
+                
+                # Nom du paramètre pour l'URL cible
+                target_path_parameter: _target_path
+                
+                # Utiliser le header Referer (déconseillé)
+                use_referer: false
+```
+
+## Implémentation dans ton Authenticator
+
+Dans ta méthode `onAuthenticationSuccess()`, utilise le `TargetPathTrait` pour récupérer l'URL sauvegardée:[5][2]
+
+```php
+use Symfony\Component\Security\Http\Util\TargetPathTrait;
+
+class LoginFormAuthenticator extends AbstractAuthenticator
+{
+    use TargetPathTrait;
+    
+    public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
+    {
+        // Récupère l'URL sauvegardée dans la session
+        $targetPath = $this->getTargetPath($request->getSession(), $firewallName);
+        
+        if ($targetPath) {
+            return new RedirectResponse($targetPath);
+        }
+        
+        // Redirection par défaut si aucune URL n'est sauvegardée
+        return new RedirectResponse($this->urlGenerator->generate('dashboard'));
+    }
+}
+```
+
+Le `TargetPathTrait` accède à la clé de session `_security.{firewallName}.target_path` qui contient l'URL que l'utilisateur tentait d'atteindre. Cette approche est plus fiable que `use_referer: true`, car le header Referer peut être absent ou incomplet dans certains cas (ouverture d'un nouvel onglet, par exemple).[1][5]
+
+Sources
+[1] How to redirect to previous URL after login? #57813 https://github.com/symfony/symfony/discussions/57813
+[2] Symfony 4, how redirect the user after login (or logout) to the previous page? https://stackoverflow.com/questions/56630369/symfony-4-how-redirect-the-user-after-login-or-logout-to-the-previous-page
+[3] Customizing the Form Login Authenticator Responses https://symfony.com/doc/current/security/form_login.html
+[4] How redirect to previous request after login in Symfony https://stackoverflow.com/questions/22788545/how-redirect-to-previous-request-after-login-in-symfony
+[5] symfony/src/Symfony/Component/Security/Http/Util/TargetPathTrait.php at 7.3 · symfony/symfony https://github.com/symfony/symfony/blob/7.3/src/Symfony/Component/Security/Http/Util/TargetPathTrait.php
+[6] How to Customize Redirect After Form Login https://symfony.com/doc/3.x/security/form_login.html
+[7] [FIXED] How to stop Symfony redirecting after logout https://www.phpfixing.com/2021/12/fixed-how-to-stop-symfony-redirecting.html
+[8] [Symfony 4] Problème redirection après login https://openclassrooms.com/forum/sujet/symfony-4-probleme-redirection-apres-login
+[9] Symfony2 Manual Redirect to Login, Preserving _security.main.target_path https://stackoverflow.com/questions/34625413/symfony2-manual-redirect-to-login-preserving-security-main-target-path
+[10] Logging Out and Cleaning Up > Starting in Symfony2 https://symfonycasts.com/screencast/symfony2-ep2/logout
