@@ -87,6 +87,85 @@ Et les utiliser dans Twig comme :
 
 ---
 
-Si tu veux, je peux te préparer un **exemple complet de configuration Symfony Asset Mapper** avec un dossier personnalisé et versioning automatique des fichiers pour que tu puisses juste copier-coller.
+Parfait ! Avec le **Asset Mapper** dans Symfony 6.3+, il y a quelques commandes clés pour gérer les fichiers statiques, publier les assets et vérifier leur version. Voici un résumé pratique :
+
+---
+
+### 1. Installer / publier les assets
+
+```bash
+# Copier les fichiers du répertoire assets/ vers public/
+php bin/console assets:install
+```
+
+* Optionnel : tu peux forcer l’écrasement ou utiliser des liens symboliques :
+
+```bash
+php bin/console assets:install --symlink
+php bin/console assets:install --relative
+```
+
+---
+
+### 2. Nettoyer le dossier public
+
+Si tu veux repartir de zéro (utile avant un nouveau build) :
+
+```bash
+php bin/console assets:install --clean
+```
+
+---
+
+### 3. Vérifier la configuration et les chemins
+
+Symfony fournit une commande pour lister les packages et leurs chemins :
+
+```bash
+php bin/console debug:config framework assets
+```
+
+---
+
+### 4. Gestion du manifest (versioning)
+
+Si tu utilises le **manifest JSON** pour le cache-busting :
+
+```bash
+# Générer le manifest
+php bin/console assets:install
+# Symfony mettra à jour public/build/manifest.json ou ton dossier configuré
+```
+
+Dans Twig ou PHP, tu peux ensuite utiliser `asset('file.png')` et Symfony ajoutera automatiquement le hash si nécessaire.
+
+---
+
+### 5. Astuce pour le développement
+
+En développement, tu peux aussi utiliser :
+
+```bash
+php bin/console assets:install --symlink
+```
+
+* Cela crée des liens symboliques vers tes fichiers dans `assets/`, donc tu n’as pas besoin de repasser la commande à chaque modification.
+* Très pratique pour le hot-reloading avec CSS ou JS.
+
+---
+
+💡 **Récap rapide des plus utiles** :
+
+| Commande                        | Usage                                  |
+| ------------------------------- | -------------------------------------- |
+| `assets:install`                | Publier les assets dans `public/`      |
+| `assets:install --symlink`      | Lier symboliquement pour dev           |
+| `assets:install --clean`        | Nettoyer avant un nouveau build        |
+| `debug:config framework assets` | Vérifier la configuration des packages |
+
+---
+
+Si tu veux, je peux te faire un **petit script des commandes Asset Mapper** qu’on utilise en dev et en prod, pour que tu n’aies plus à te souvenir de tous les flags.
 
 Veux‑tu que je fasse ça ?
+
