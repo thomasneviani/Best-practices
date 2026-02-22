@@ -1,0 +1,72 @@
+Pour une app Symfony combinant web (HTML/Twig) et API (JSON), un listener sur `kernel.exception` (erreurs 404/500) détecte le type de requête pour adapter la réponse. Cela centralise la logique sans routes séparées.
+
+## Détection automatique
+Vérifiez le header `Accept` de la requête : `application/json` pour API → JSON ; `text/html` pour web → template Twig.[1][2][3]
+Ou utilisez le `_format` de la route (ex. `/api/...` avec `format: json`).[4]
+
+## Réponses adaptées
+- **API** : JSON structuré `{"code": 404, "message": "Non trouvé", "details": "..."}` sans stack trace en prod.
+- **Web** : Template Twig custom (`error404.html.twig`) avec design UX-friendly.[5][1]
+
+## Logging unifié
+Loggez toujours (Monolog) : erreur, stack, contexte (API vs web, user), monitoring Sentry pour les deux.[1]
+
+## Exemple listener
+```php
+// src/EventListener/ExceptionListener.php
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpKernel\Event\ExceptionEvent;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+
+public function onKernelException(ExceptionEvent $event): void
+{
+    $request = $event->getRequest();
+    $exception = $event->getThrowable();
+    $statusCode = 500;
+
+    if ($exception instanceof NotFoundHttpException) {
+        $statusCode = 404;
+    }
+
+    // Détection API vs Web
+    if (str_contains($request->getPathInfo(), '/api/') || 
+        str_contains($request->headers->get('Accept'), 'application/json')) {
+        $data = ['code' => $statusCode, 'message' => 'Erreur serveur'];
+        $response = new JsonResponse($data, $statusCode);
+    } else {
+        // Web : template Twig
+        $response = new Response('', $statusCode);
+        $response->setContent($this->twig->render('error/' . $statusCode . '.html.twig'));
+    }
+
+    $this->logger->error('Erreur ' . $statusCode, ['exception' => $exception]);
+    $event->setResponse($response);
+}
+```
+**Avantages** : UX cohérente (pas de HTML en API), sécurité (pas de traces sensibles), facile à étendre pour DDD/refactoring.[2][3][1]
+
+## Configuration services.yaml
+```yaml
+services:
+    App\EventListener\ExceptionListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.exception, priority: 0 }
+```
+Priorité ajustable pour overrides (ex. API Platform).[6]
+
+Sources
+[1] Comment gérer les erreurs dans une API Symfony https://boscop.fr/gerer-erreur-api-symfony/
+[2] How do I send a JSON response within Symfny error handling? https://stackoverflow.com/questions/74574097/how-do-i-send-a-json-response-within-symfny-error-handling
+[3] Change HTML errors to JSON · symfony symfony · Discussion #42441 https://github.com/symfony/symfony/discussions/42441
+[4] Symfony/API Platform Error Listeners https://byang.hashnode.dev/symfonyapi-platform-error-listeners
+[5] How to Customize Error Pages https://symfony.com/doc/current/controller/error_pages.html
+[6] Events and Event Listeners (Symfony Docs) https://symfony.com/doc/current/event_dispatcher.html
+[7] Capturing exceptions from event listeners in Symfony so ... https://stackoverflow.com/questions/68754840/capturing-exceptions-from-event-listeners-in-symfony-so-that-they-dont-stop-oth
+[8] Easy Exception Handling in Symfony with Exception Listeners https://randomcoding.com/blog/2024-04-27-easy-exception-handling-in-symfony-with-exception-listeners/
+[9] Global RESTful Exception Handling > Symfony RESTful API https://symfonycasts.com/screencast/symfony-rest2/api-exception-subscriber
+[10] Events and Event Listeners (Symfony Docs) https://symfony.com/doc/current/event_dispatcher/.html
+[11] Content of JSON response for uncaught exceptions https://www.reddit.com/r/symfony/comments/12ie1f6/content_of_json_response_for_uncaught_exceptions/
+[12] [FrameworkBundle][BC Break] Adding http_exception_listener introduces BC break to exception handling · Issue #27212 · symfony/symfony https://github.com/symfony/symfony/issues/27212
+[13] return json with exception listener - symfony https://stackoverflow.com/questions/54195080/return-json-with-exception-listener
+[14] Events and Event Listeners (Symfony 3.x Docs) https://symfony.com/doc/3.x/event_dispatcher.html
+[15] Built-in Symfony Events https://symfony.com/doc/current/reference/events.html
